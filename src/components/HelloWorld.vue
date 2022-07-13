@@ -1,58 +1,140 @@
 <template>
-  <div class="hello">
-    <h1>{{ msg }}</h1>
-    <p>
-      For a guide and recipes on how to configure / customize this project,<br>
-      check out the
-      <a href="https://cli.vuejs.org" target="_blank" rel="noopener">vue-cli documentation</a>.
-    </p>
-    <h3>Installed CLI Plugins</h3>
-    <ul>
-      <li><a href="https://github.com/vuejs/vue-cli/tree/dev/packages/%40vue/cli-plugin-babel" target="_blank" rel="noopener">babel</a></li>
-      <li><a href="https://github.com/vuejs/vue-cli/tree/dev/packages/%40vue/cli-plugin-eslint" target="_blank" rel="noopener">eslint</a></li>
-    </ul>
-    <h3>Essential Links</h3>
-    <ul>
-      <li><a href="https://vuejs.org" target="_blank" rel="noopener">Core Docs</a></li>
-      <li><a href="https://forum.vuejs.org" target="_blank" rel="noopener">Forum</a></li>
-      <li><a href="https://chat.vuejs.org" target="_blank" rel="noopener">Community Chat</a></li>
-      <li><a href="https://twitter.com/vuejs" target="_blank" rel="noopener">Twitter</a></li>
-      <li><a href="https://news.vuejs.org" target="_blank" rel="noopener">News</a></li>
-    </ul>
-    <h3>Ecosystem</h3>
-    <ul>
-      <li><a href="https://router.vuejs.org" target="_blank" rel="noopener">vue-router</a></li>
-      <li><a href="https://vuex.vuejs.org" target="_blank" rel="noopener">vuex</a></li>
-      <li><a href="https://github.com/vuejs/vue-devtools#vue-devtools" target="_blank" rel="noopener">vue-devtools</a></li>
-      <li><a href="https://vue-loader.vuejs.org" target="_blank" rel="noopener">vue-loader</a></li>
-      <li><a href="https://github.com/vuejs/awesome-vue" target="_blank" rel="noopener">awesome-vue</a></li>
-    </ul>
-  </div>
+ <div>
+ <div id="container"></div>
+ </div>
 </template>
 
 <script>
-export default {
-  name: 'HelloWorld',
-  props: {
-    msg: String
-  }
-}
-</script>
+ import * as THREE from 'three'
+   import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+   import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
+ 
+//导入dat.gui
+import * as dat from "dat.gui";
+import gsap from 'gsap'
 
-<!-- Add "scoped" attribute to limit CSS to this component only -->
+
+ export default {
+ name: 'THREETest',
+ data () {
+  return {
+  camera: null,
+  scene: null,
+  renderer: null,
+  mesh: null,
+  controls:null,
+  axesHelper:null,
+  fullScreenElement:null
+  }
+ },
+ methods: {
+  init() {
+  const container = document.getElementById('container')
+
+  //场景
+  this.scene = new THREE.Scene()
+  //相机
+  this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.01, 1000)
+  this.camera.position.set(10,10,10)
+  
+ //环境光
+    let ambient = new THREE.AmbientLight(0xF8F8FF);
+    this.scene.add(ambient);
+
+  let point = new THREE.PointLight(0xFF00FF);
+      point.position.set(10, 10, 10); //点光源位置 xyz
+      this.scene.add(point); //点光源添加到场景中
+
+  //初始化渲染器
+  this.renderer = new THREE.WebGLRenderer({
+      //抗锯齿
+      antialias: true})
+  //设置渲染尺寸大小
+  this.renderer.setSize(container.clientWidth, container.clientHeight)
+  this.renderer.setClearColor(0x5F9EA0, 1); //设置背景颜色
+
+  //将webgl渲染的canvas添加到container
+  container.appendChild(this.renderer.domElement)
+
+  //创建控制器
+   this.controls = new OrbitControls(this.camera,this.renderer.domElement);//创建控件对象
+   //设置控制器阻尼，让控制器更有真实效果,必须在动画循环里调用.update()。
+   this.controls.enenableDamping = true
+
+
+  //创建轨道控制器(坐标轴)
+  this.axesHelper = new THREE.AxesHelper(8)
+  this.scene.add(this.axesHelper)
+  
+  //监听画面变化,更新渲染画面  ===>  使用窗口大小
+  window.addEventListener('resize',()=>{
+      console.log('画面变化了')
+      //更新摄像头 
+      this.camera.aspect = window.innerWidth/window.innerHeight
+      //更新摄像机的投影矩阵
+      this.camera.updateProjectionMatrix()
+      //更新渲染器
+      this.renderer.setSize(window.innerWidth,window.innerHeight)
+      //设置渲染器的像素比
+      this.renderer.setPixelRatio(window.devicePixelRatio)
+  })
+
+ //全屏事件
+ window.addEventListener('dblclick',()=>{
+     this.fullScreenElement = document.fullscreenElement
+     console.log(this.fullScreenElement,'全屏') 
+     if(!this.fullScreenElement){
+         //双击控制屏幕进入全屏,退出全屏
+         this.renderer.domElement.requestFullscreen()
+     }else{
+         //退出全屏
+         document.exitFullscreen()
+         console.log(this.fullScreenElement,'全屏xxx') 
+     }
+ })
+
+
+  },
+
+ 
+  loadGltf() {
+	// const this = this;
+	const loader = new GLTFLoader();
+	//load一个测试模型路径：public/model/hz.glb
+	loader.load("/model/hz.glb", (gltf)=> {
+		// this.isLoading = false;//关闭载入中效果
+		this.mesh = gltf.scene;
+		this.mesh.scale.set(100, 100, 100);//设置大小比例
+		this.mesh.position.set(0, 0, 0);//设置位置
+		this.scene.add(this.mesh); // 将模型引入three、
+    this.mesh.rotation.y  += Math.PI
+		// this.animate();
+    console.log(gltf,'我是模型') 
+		});
+	},
+
+
+
+
+  //使用渲染器，通过相机将场景渲染
+  animate() {
+  requestAnimationFrame(this.animate)
+    //启动阻尼
+  this.controls.update()
+  // this.mesh.rotation.x += 0.01;
+  this.renderer.render(this.scene, this.camera)
+  }
+ },
+ mounted () {
+     //页面出现挂载函数
+  this.init()
+  this.animate()
+  this.loadGltf()
+ }
+ }
+</script>
 <style scoped>
-h3 {
-  margin: 40px 0 0;
-}
-ul {
-  list-style-type: none;
-  padding: 0;
-}
-li {
-  display: inline-block;
-  margin: 0 10px;
-}
-a {
-  color: #42b983;
-}
+ #container {
+ height: 900px
+ }
 </style>
